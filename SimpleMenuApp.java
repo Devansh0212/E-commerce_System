@@ -2,8 +2,8 @@ import java.sql.*;
 
 public class SimpleMenuApp {
     static final String DB_URL = "jdbc:oracle:thin:@oracle.scs.ryerson.ca:1521:orcl"; // Change as per your DB
-    static final String USER = "k2soni";
-    static final String PASS = "08237159";
+    static final String USER = "USERID";
+    static final String PASS = "PASSWORD";
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS)) {
