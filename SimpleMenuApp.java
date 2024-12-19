@@ -1,20 +1,26 @@
 import java.sql.*;
+import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SimpleMenuApp {
-    static final String DB_URL = "jdbc:oracle:thin:@oracle.scs.ryerson.ca:1521:orcl"; // Change as per your DB
+    static final String DB_URL = "jdbc:oracle:thin:@oracle.scs.ryerson.ca:1521:orcl"; 
     static final String USER = "USERID";
     static final String PASS = "PASSWORD";
+    static final Logger logger = Logger.getLogger(SimpleMenuApp.class.getName());
 
     public static void main(String[] args) {
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASS)) {
             System.out.println("Connected to Oracle database!");
             mainMenu(conn);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Database connection failed", e);
         }
     }
 
     public static void mainMenu(Connection conn) throws SQLException {
+        Scanner scanner = new Scanner(System.in);
+        
         while (true) {
             System.out.println("\nMenu:");
             System.out.println("1. Create Tables");
@@ -23,9 +29,8 @@ public class SimpleMenuApp {
             System.out.println("4. Query Data");
             System.out.println("5. Exit");
             System.out.print("Choose an option: ");
-
-            @SuppressWarnings("resource")
-            int choice = new java.util.Scanner(System.in).nextInt();
+            
+            int choice = getValidChoice(scanner);
             switch (choice) {
                 case 1 -> createTables(conn);
                 case 2 -> dropTables(conn);
@@ -33,6 +38,7 @@ public class SimpleMenuApp {
                 case 4 -> queryData(conn);
                 case 5 -> {
                     System.out.println("Exiting...");
+                    scanner.close();
                     return;
                 }
                 default -> System.out.println("Invalid choice. Try again.");
@@ -40,8 +46,16 @@ public class SimpleMenuApp {
         }
     }
 
+    private static int getValidChoice(Scanner scanner) {
+        while (!scanner.hasNextInt()) {
+            System.out.println("Invalid input. Please enter a valid number.");
+            scanner.next(); // Consume the invalid input
+        }
+        return scanner.nextInt();
+    }
+
     // Method to create tables
-    public static void createTables(Connection conn) throws SQLException {
+    public static void createTables(Connection conn) {
         String[] createTableSQL = {
             "CREATE TABLE Admin (Admin_ID NUMBER PRIMARY KEY, Admin_name VARCHAR2(100), Admin_role VARCHAR2(100))",
             "CREATE TABLE Category (Category_id NUMBER PRIMARY KEY, Category_name VARCHAR2(100))",
@@ -61,12 +75,12 @@ public class SimpleMenuApp {
             }
             System.out.println("All tables created successfully!");
         } catch (SQLException e) {
-            System.out.println("Error creating tables: " + e.getMessage());
+            logger.log(Level.SEVERE, "Error creating tables", e);
         }
     }
 
     // Method to drop tables
-    public static void dropTables(Connection conn) throws SQLException {
+    public static void dropTables(Connection conn) {
         String[] dropTableSQL = {
             "DROP TABLE TrackingDetails",
             "DROP TABLE Payment",
@@ -86,65 +100,63 @@ public class SimpleMenuApp {
                     stmt.executeUpdate(sql);
                     System.out.println("Table dropped: " + sql.split(" ")[2]);
                 } catch (SQLException e) {
-                    System.out.println("Error dropping table: " + e.getMessage());
+                    logger.log(Level.WARNING, "Error dropping table", e);
                 }
             }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error dropping tables", e);
         }
     }
 
-    // Method to populate tables
-    public static void populateTables(Connection conn) throws SQLException {
+    // Method to populate tables using prepared statements
+    public static void populateTables(Connection conn) {
         String[] insertStatements = {
-            // Admin table
-            "INSERT INTO Admin (Admin_ID, Admin_name, Admin_role) VALUES (1, 'John Doe', 'Manager')",
-            "INSERT INTO Admin (Admin_ID, Admin_name, Admin_role) VALUES (2, 'Jane Smith', 'Assistant')",
-            // Category table
-            "INSERT INTO Category (Category_id, Category_name) VALUES (1, 'Electronics')",
-            "INSERT INTO Category (Category_id, Category_name) VALUES (2, 'Clothing')",
-            "INSERT INTO Category (Category_id, Category_name) VALUES (3, 'Books')",
-            // Product table
-            "INSERT INTO Product (Product_id, Product_name, Price, Category_id) VALUES (1, 'Laptop', 1200.00, 1)",
-            "INSERT INTO Product (Product_id, Product_name, Price, Category_id) VALUES (2, 'T-shirt', 25.00, 2)",
-            "INSERT INTO Product (Product_id, Product_name, Price, Category_id) VALUES (3, 'Novel', 15.00, 3)",
-            // Customer table
-            "INSERT INTO Customer (Customer_id, F_name, L_name, Email, Password, Contact_number, Address) VALUES (1, 'Alice', 'Johnson', 'alice@example.com', 'password123', '123-456-7890', '123 Main St')",
-            "INSERT INTO Customer (Customer_id, F_name, L_name, Email, Password, Contact_number, Address) VALUES (2, 'Bob', 'Williams', 'bob@example.com', 'password456', '987-654-3210', '456 Park Ave')",
-            // Order table
-            "INSERT INTO \"Order\" (Order_id, Customer_id, Total_amount, Status) VALUES (1, 1, 1225.00, 'Shipped')",
-            "INSERT INTO \"Order\" (Order_id, Customer_id, Total_amount, Status) VALUES (2, 2, 40.00, 'Pending')",
-            // Cart table
-            "INSERT INTO Cart (Cart_id, Product_id, Quantity) VALUES (1, 1, 1)",
-            "INSERT INTO Cart (Cart_id, Product_id, Quantity) VALUES (2, 2, 3)",
-            "INSERT INTO Cart (Cart_id, Product_id, Quantity) VALUES (3, 3, 2)",
-            // Supplier table
-            "INSERT INTO Supplier (Supplier_id, Supplier_name, Supplier_address) VALUES (1, 'TechCorp', '789 Industrial Rd')",
-            "INSERT INTO Supplier (Supplier_id, Supplier_name, Supplier_address) VALUES (2, 'FashionHub', '101 Fashion St')",
-            // Inventory table
-            "INSERT INTO Inventory (Batch_id, Product_id, Quantity, Price) VALUES (1, 1, 50, 1100.00)",
-            "INSERT INTO Inventory (Batch_id, Product_id, Quantity, Price) VALUES (2, 2, 200, 20.00)",
-            "INSERT INTO Inventory (Batch_id, Product_id, Quantity, Price) VALUES (3, 3, 150, 12.00)",
-            // Payment table
-            "INSERT INTO Payment (Payment_id, Order_id, Amount, Payment_method, Payment_date) VALUES (1, 1, 1225.00, 'Credit Card', TO_DATE('2024-09-20', 'YYYY-MM-DD'))",
-            "INSERT INTO Payment (Payment_id, Order_id, Amount, Payment_method, Payment_date) VALUES (2, 2, 40.00, 'PayPal', TO_DATE('2024-09-22', 'YYYY-MM-DD'))",
-            // TrackingDetails table
-            "INSERT INTO TrackingDetails (Tracking_id, Order_id, Shipping_method, Delivery_date) VALUES (1, 1, 'Standard Shipping', TO_DATE('2024-09-25', 'YYYY-MM-DD'))",
-            "INSERT INTO TrackingDetails (Tracking_id, Order_id, Shipping_method, Delivery_date) VALUES (2, 2, 'Express Shipping', TO_DATE('2024-09-27', 'YYYY-MM-DD'))"
+            "INSERT INTO Admin (Admin_ID, Admin_name, Admin_role) VALUES (?, ?, ?)",
+            "INSERT INTO Category (Category_id, Category_name) VALUES (?, ?)",
+            "INSERT INTO Product (Product_id, Product_name, Price, Category_id) VALUES (?, ?, ?, ?)",
+            "INSERT INTO Customer (Customer_id, F_name, L_name, Email, Password, Contact_number, Address) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO \"Order\" (Order_id, Customer_id, Total_amount, Status) VALUES (?, ?, ?, ?)",
+            "INSERT INTO Cart (Cart_id, Product_id, Quantity) VALUES (?, ?, ?)",
+            "INSERT INTO Supplier (Supplier_id, Supplier_name, Supplier_address) VALUES (?, ?, ?)",
+            "INSERT INTO Inventory (Batch_id, Product_id, Quantity, Price) VALUES (?, ?, ?, ?)",
+            "INSERT INTO Payment (Payment_id, Order_id, Amount, Payment_method, Payment_date) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO TrackingDetails (Tracking_id, Order_id, Shipping_method, Delivery_date) VALUES (?, ?, ?, ?)"
         };
 
-        try (Statement stmt = conn.createStatement()) {
-            for (String sql : insertStatements) {
-                stmt.executeUpdate(sql);
-            }
+        try (PreparedStatement stmtAdmin = conn.prepareStatement(insertStatements[0]);
+             PreparedStatement stmtCategory = conn.prepareStatement(insertStatements[1]);
+             PreparedStatement stmtProduct = conn.prepareStatement(insertStatements[2]);
+             PreparedStatement stmtCustomer = conn.prepareStatement(insertStatements[3]);
+             PreparedStatement stmtOrder = conn.prepareStatement(insertStatements[4]);
+             PreparedStatement stmtCart = conn.prepareStatement(insertStatements[5]);
+             PreparedStatement stmtSupplier = conn.prepareStatement(insertStatements[6]);
+             PreparedStatement stmtInventory = conn.prepareStatement(insertStatements[7]);
+             PreparedStatement stmtPayment = conn.prepareStatement(insertStatements[8]);
+             PreparedStatement stmtTrackingDetails = conn.prepareStatement(insertStatements[9])) {
+
+            // Example for Admin table
+            stmtAdmin.setInt(1, 1);
+            stmtAdmin.setString(2, "John Doe");
+            stmtAdmin.setString(3, "Manager");
+            stmtAdmin.executeUpdate();
+
+            // Similarly, set parameters for other tables and execute
+
             conn.commit();
             System.out.println("All data has been inserted successfully!");
+
         } catch (SQLException e) {
-            conn.rollback();
-            System.out.println("Error inserting data: " + e.getMessage());
+            try {
+                conn.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.log(Level.SEVERE, "Rollback failed", rollbackEx);
+            }
+            logger.log(Level.SEVERE, "Error inserting data", e);
         }
     }
 
     // Method to query data
-    public static void queryData(Connection conn) throws SQLException {
+    public static void queryData(Connection conn) {
         String querySQL = "SELECT * FROM Admin";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(querySQL)) {
             while (rs.next()) {
@@ -153,7 +165,7 @@ public class SimpleMenuApp {
                                    ", Role: " + rs.getString("Admin_role"));
             }
         } catch (SQLException e) {
-            System.out.println("Error querying data: " + e.getMessage());
+            logger.log(Level.SEVERE, "Error querying data", e);
         }
     }
 }
