@@ -1,4 +1,4 @@
-# Simple Menu Application - Database Management System
+# E-Commerce - Database Management System
 
 ## Overview
 
